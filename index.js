@@ -1,4 +1,5 @@
 // Connect to mongodb database. 
+require('dotenv').config();
 const connectToMongo=require('./db');
 const express = require('express')
 const app = express()
@@ -6,8 +7,8 @@ const port =5000;
 var cors = require('cors')
 app.use(cors())
 app.use(express.json())
+connectToMongo()
 
-// Middleware to parse JSON request bodies
 app.use(express.json());
 
 app.get('/', (req, res) => {

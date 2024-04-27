@@ -1,60 +1,56 @@
 const express = require('express');
 const router = express.Router();
-const fetchuser = require('../middleware/fetchuser');
+const jwt = require('jsonwebtoken');
 const Notes = require('../models/Notes');
-const { body, validationResult } = require('express-validator');
+const JWT_SECRET = process.env.JWT_SECRET;
 
-//ROUTE 1: Get all the notes using: GET "/api/auth/getuser". Login required.
-router.get('/fetchallnotes', fetchuser, async (req, res) => {
+function verifyToken(req, res, next) {
+    const token = req.headers['authorization'];
+    if (token === null) return res.sendStatus(401, "hfdn");
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
+}
+
+router.get('/fetchallnotes', verifyToken, async (req, res) => {
     try {
-        const notes = await Notes.find({ user: req.user.id });
+        const userId=req.user;
+        const notes = await Notes.find({ user: req.user });
         res.json(notes);
     } catch (error) {
         console.error(error.message);
-        res.status(500).send("Internal server error occurred.")
+        res.status(500).send("Internal server error occurred verify.")
     }
 });
 
-//Look out for async await
-//ROUTE 2: Add a new note using: POST "/api/auth/addnote". Login required.
-router.post('/addnote', fetchuser, [
-    body('title', 'Enter a valid title').isLength({ min: 3 }),
-    body('description', 'Enter a valid description').isLength({ min: 5 })
-], async (req, res) => {
+router.post('/addnote', verifyToken, async (req, res) => {
     try {
-        const { title, description, tag } = req.body;
-        // if there are errors return bad request and the errors
-        // express-validator
-        // console.log(title)
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
+        const { title, description } = req.body;
+        const userId=req.user;
+
         const note = new Notes({
-            title, description, tag, user: req.user.id
+            title, description, user: req.user
         })
         const savedNote = await note.save()
-        res.json(savedNote) // will send the saved note as response
+        res.json(savedNote);
     } catch (error) {
         console.error(error.message);
         res.status(500).send("Internal server error occured")
     }
 })
 
-//ROUTE 3: Update an existing note: PUT "/api/auth/updatenote". Login required.
-router.put('/updatenote/:id', fetchuser, async (req, res) => {
-    const { title, description, tag } = req.body;
+router.put('/updatenote/:id', verifyToken, async (req, res) => {
+    const { title, description} = req.body;
     try {
-        //Create a newNote object
         const newNote = {};
         if (title) { newNote.title = title };
         if (description) { newNote.description = description };
-        if (tag) { newNote.tag = tag };
 
-        //Find the new note to be updated and update it
         let note = await Notes.findById(req.params.id);
         if (!note) { res.status(404).send("Not Found") }
-        if (note.user.toString() !== req.user.id) {
+        if (note.user !== req.user) {
             return res.status(401).send('Not Allowed');
         }
         note = await Notes.findByIdAndUpdate(req.params.id, { $set: newNote }, { new: true });
@@ -64,16 +60,11 @@ router.put('/updatenote/:id', fetchuser, async (req, res) => {
         res.status(500).send("Internal server error occured")
     }
 })
-
-//ROUTE 4: Delete an existing note: DELETE "/api/auth/deletenote". Login required.
-router.delete('/deletenote/:id', fetchuser, async (req, res) => {
+router.delete('/deletenote/:id', verifyToken, async (req, res) => {
     try {
-        //Find the new note to be deleted and delete it
         let note = await Notes.findById(req.params.id);
         if (!note) { res.status(404).send("Not Found") }
-
-        //Allow deletion only if user owns this Note
-        if (note.user.toString() !== req.user.id) {
+        if (note.user !== req.user) {
             return res.status(401).send('Not Allowed');
         }
         note = await Notes.findByIdAndDelete(req.params.id);
