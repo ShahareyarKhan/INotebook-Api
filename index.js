@@ -1,23 +1,35 @@
-// Connect to mongodb database. 
 require('dotenv').config();
-const connectToMongo=require('./db');
-const express = require('express')
-const app = express()
-const port =5000;
-var cors = require('cors')
-app.use(cors())
-app.use(express.json())
-connectToMongo()
+const connectToMongo = require('./db');
+const express = require('express');
+const app = express();
+const port = 5000;
+const cors = require('cors');
 
+// Connect to MongoDB
+connectToMongo();
+
+// Configure CORS
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://inotebook-shahareyar.vercel.app'
+  ],
+  credentials: true, // Enable credentials if needed
+}));
+
+// Middleware to parse JSON requests
 app.use(express.json());
 
+// Basic route
 app.get('/', (req, res) => {
-  res.send('hello world')
-})
+  res.send('Hello World');
+});
 
-app.use('/api/auth',require('./routes/auth'))
-app.use('/api/notes',require('./routes/notes'))
+// API routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/notes', require('./routes/notes'));
 
-app.listen(port,()=>{
-    console.log(`Example are listening at http://localhost:${port}`)
-})
+// Start the server
+app.listen(port, () => {
+  console.log(`Server is running at http://localhost:${port}`);
+});
