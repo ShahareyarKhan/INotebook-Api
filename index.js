@@ -9,13 +9,15 @@ const cors = require('cors');
 connectToMongo();
 
 // Configure CORS
-app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://inotebook-shahareyar.vercel.app'
-  ],
-  credentials: true, // Enable credentials if needed
-}));
+// app.use(cors({
+//   origin: [
+//     'http://localhost:3000',
+//     'https://inotebook-shahareyar.vercel.app'
+//   ],
+//   credentials: true, // Enable credentials if needed
+// }));
+
+app.use(cors());
 
 // Middleware to parse JSON requests
 app.use(express.json());
